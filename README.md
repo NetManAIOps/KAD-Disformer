@@ -78,7 +78,7 @@ This will also generate `finetune_before_plot.html` and `finetune_after_plot.htm
 To evaluate a trained model, use the `test.py` script. This will load the model and test it on the specified dataset, generating an F1 score and a visualization plot.
 
 ```bash
-python src/test.py --model_path checkpoints/model_final.pth --data_path data/test.csv
+uv run src/test.py --model_path checkpoints/model_final.pth --data_path data/test.csv
 ```
 
 The output plot will be saved as `test_plot.html`.
