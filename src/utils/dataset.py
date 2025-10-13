@@ -7,6 +7,41 @@ import os
 import numpy as np
 import pywt
 
+def recover_patch(seqs_with_patch, patch_stride=1, seq_stride=1):
+    # if isinstance(seqs_with_patch, list):
+    #     seq_patches = torch.stack(seqs_with_patch, dim=0)
+
+    # Without Avg
+    def flatten_patch(seq_with_patch_ls: list | torch.Tensor, stride=1):
+        return_tensor = False
+        if isinstance(seq_with_patch_ls, torch.Tensor):
+            seq_with_patch_ls = [seq_with_patch_ls]
+            return_tensor = True
+
+        flattened = []
+        for seq_with_path in seq_with_patch_ls:
+            flattened.append(torch.cat([seq_with_path[:-1, :stride].reshape(-1), seq_with_path[-1].reshape(-1)], dim=0))
+
+        if len(flattened) == 1 and return_tensor:
+            return flattened[0]
+        else:
+            return flattened
+
+    if isinstance(seqs_with_patch, torch.Tensor):
+        sample_num = seqs_with_patch.shape[0]
+
+        seq_without_patch = torch.cat([seqs_with_patch[:, :-1, :patch_stride].reshape(sample_num, -1), seqs_with_patch[:, -1].reshape(sample_num, -1)], dim=1)
+        return torch.cat([seq_without_patch[:-1, :seq_stride].reshape(-1), seq_without_patch[-1].reshape(-1)], dim=0)
+
+    seq_without_patch = torch.stack(flatten_patch(seqs_with_patch, patch_stride), dim=0)
+    one_dim_seq  = flatten_patch(seq_without_patch, seq_stride)
+
+    print(one_dim_seq.shape)
+
+    return one_dim_seq
+
+
+
 class UTSDataset(Dataset):
     def __init__(self, seqs, win_len, seq_len, labels=None) -> None:
         super().__init__()
@@ -103,7 +138,8 @@ class KAD_DisformerTrainSet(Dataset):
 
 
     def __getitem__(self, index):
-        return self.context_flow[index][0], self.history_flow[index][0], self.denoised_context[index][0]
+        return self.context_flow[index], self.history_flow[index], self.denoised_context[index]
+
 
 
 
@@ -121,7 +157,7 @@ class KAD_DisformerTestSet(Dataset):
 
 
     def __getitem__(self, index):
-        return self.context_flow[index][0], self.history_flow[index][0]
+        return self.context_flow[index], self.history_flow[index]
     
 
 def train_test_split(data, train_ratio=0.8):
@@ -144,7 +180,7 @@ def load_csvs(csv_path):
 if __name__ == '__main__':
     import pandas as pd
 
-    raw_ts = pd.read_csv("../data/train.csv")[['value', 'label']].to_numpy()
+    raw_ts = pd.read_csv("../../data/train.csv")[['value', 'label']].to_numpy()
     dd = DenoisedUTSDataset(raw_ts[:, 0], 20, 120, raw_ts[:, 1])
     d = UTSDataset(raw_ts[:, 0], 20, 120, raw_ts[:, 1])
 
